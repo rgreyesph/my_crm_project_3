@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% load crispy_forms_tags %}
+{% block title %}{{ form_title }}{% endblock %}
+{% block content %}
+    <h2>{{ form_title }}</h2>
+    <hr>
+    <form method="post" autocomplete="off">
+        {% csrf_token %}
+        {% crispy form %} {# Use Crispy tag - will use helper defined in DealForm #}
+        <div class="mt-3">
+            <button type="submit" class="btn btn-success">Save Deal</button>
+            {% if object %}
+                <a href="{% url 'sales_pipeline:deal-detail' object.pk %}"
+                   class="btn btn-outline-secondary">Cancel</a>
+            {% else %}
+                <a href="{% url 'sales_pipeline:deal-list' %}"
+                   class="btn btn-outline-secondary">Cancel</a>
+            {% endif %}
+        </div>
+    </form>
+    {{ form.media }} {# Include for Autocomplete widgets #}
+{% endblock %}

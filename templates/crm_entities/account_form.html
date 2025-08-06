@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% load crispy_forms_tags %} {# Load crispy tags #}
+
+{% block title %}{{ form_title }}{% endblock %}
+
+{% block content %}
+<h2>{{ form_title }}</h2>
+<hr>
+<form method="post" autocomplete="off"> {# Method is post for create/update #}
+    {% csrf_token %}
+
+    {# Use Crispy tag to render based on FormHelper in AccountForm #}
+    {% crispy form %}
+
+    <div class="mt-3"> {# Buttons remain outside the crispy generated part #}
+        <button type="submit" class="btn btn-success">Save Account</button>
+        {% if object %} {# Link back to detail if updating #}
+            <a href="{% url 'crm_entities:account-detail' object.pk %}" class="btn btn-outline-secondary">Cancel</a>
+        {% else %} {# Link back to list if creating #}
+            <a href="{% url 'crm_entities:account-list' %}" class="btn btn-outline-secondary">Cancel</a>
+        {% endif %}
+    </div>
+</form>
+
+{{ form.media }} {# Include form media for widgets like autocomplete #}
+{% endblock %}

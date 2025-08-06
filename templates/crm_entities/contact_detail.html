@@ -1,0 +1,207 @@
+{% extends "base.html" %}
+{% block title %}Contact: {{ contact.full_name }}{% endblock %}
+{% block content %}
+    {# Header row #}
+    <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+        <h1 class="h2">{{ contact.full_name }}</h1>
+        <div class="btn-toolbar mb-2 mb-md-0">
+            <a href="{% url 'crm_entities:contact-update' contact.pk %}"
+               class="btn btn-sm btn-primary me-2">Edit</a>
+            <a href="{% url 'crm_entities:contact-delete' contact.pk %}"
+               class="btn btn-sm btn-danger">Delete</a>
+            {% if user.is_admin_role %}
+                <a href="{% url 'crm_entities:contact-export' %}?id={{ contact.pk }}"
+                   class="btn btn-sm btn-outline-success me-2"
+                   title="Export this Contact (Admin only)">Export</a>
+            {% endif %}
+            <a href="{% url 'crm_entities:contact-list' %}"
+               class="btn btn-sm btn-outline-secondary ms-2">Back to List</a>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-md-12">
+            {# Details card #}
+            <div class="card mb-4 shadow-sm">
+                <div class="card-header">Contact Details</div>
+                <div class="card-body">
+                    <p>
+                        <strong>Full Name:</strong> {{ contact.full_name }}
+                    </p>
+                    <p>
+                        <strong>Account:</strong>
+                        {% if contact.account %}
+                            <a href="{% url 'crm_entities:account-detail' contact.account.pk %}">{{ contact.account.name }}</a>
+                        {% else %}
+                            --
+                        {% endif %}
+                    </p>
+                    <p>
+                        <strong>Title:</strong>
+                        {{ contact.title|default:"--" }}
+                    </p>
+                    <p>
+                        <strong>Department:</strong>
+                        {{ contact.department|default:"--" }}
+                    </p>
+                    <p>
+                        <strong>Email:</strong>
+                        {% if contact.email %}
+                            <a href="mailto:{{ contact.email }}">{{ contact.email }}</a>
+                        {% else %}
+                            --
+                        {% endif %}
+                    </p>
+                    <p>
+                        <strong>Work Phone:</strong>
+                        {{ contact.work_phone|default:"--" }}
+                    </p>
+                    <p>
+                        <strong>Mobile Phone 1:</strong>
+                        {{ contact.mobile_phone_1|default:"--" }}
+                    </p>
+                    <p>
+                        <strong>Mobile Phone 2:</strong>
+                        {{ contact.mobile_phone_2|default:"--" }}
+                    </p>
+                    <p>
+                        <strong>Assigned To:</strong>
+                        {% if contact.assigned_to %}
+                            {{ contact.assigned_to.get_full_name|default:contact.assigned_to.username }}
+                        {% else %}
+                            --
+                        {% endif %}
+                    </p>
+                    <hr>
+                    <p class="card-text">
+                        <small class="text-muted">
+                            Created By:
+                            {% if contact.created_by %}
+                                {{ contact.created_by.get_full_name|default:contact.created_by.username }}
+                            {% else %}
+                                System/Unknown
+                            {% endif %}
+                            on {{ contact.created_at|date:"Y-m-d H:i"|default:"N/A" }}
+                            <br>
+                            Last Updated: {{ contact.updated_at|date:"Y-m-d H:i" }}
+                        </small>
+                    </p>
+                </div>
+            </div>
+            {# Notes card #}
+            <div class="card mb-4 shadow-sm">
+                <div class="card-header">Notes</div>
+                <div class="card-body">{{ contact.notes|linebreaksbr|default:"No notes added" }}</div>
+            </div>
+            {# Related activities card #}
+            <div class="card mb-4 shadow-sm">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <span>Related Activities</span>
+                    <div>
+                        <a href="{% url 'activities:task-create' %}?contact={{ contact.pk }}"
+                           class="btn btn-sm btn-success"
+                           title="Add Task">+T</a>
+                        <a href="{% url 'activities:call-create' %}?contact={{ contact.pk }}"
+                           class="btn btn-sm btn-success ms-1"
+                           title="Log Call">+C</a>
+                        <a href="{% url 'activities:meeting-create' %}?contact={{ contact.pk }}"
+                           class="btn btn-sm btn-success ms-1"
+                           title="Add Meeting">+M</a>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <h6>
+                        Tasks <small>({{ contact.tasks.count }})</small>
+                    </h6>
+                    {% if contact.tasks.all %}
+                        <ul class="list-group list-group-flush mb-2">
+                            {% for task in contact.tasks.all|slice:":5" %}
+                                <li class="list-group-item px-0 py-1 border-0">
+                                    <a href="{% url 'activities:task-detail' task.pk %}">{{ task.subject }}</a>
+                                    <small class="text-muted float-end">
+                                        Due: {{ task.due_date|date:"Y-m-d"|default:"None" }} |
+                                        {{ task.get_status_display }}
+                                    </small>
+                                </li>
+                            {% endfor %}
+                            <li class="list-group-item px-0 py-1 border-0">
+                                <a href="{% url 'activities:task-list' %}?related_to_contact={{ contact.pk }}"
+                                   class="btn btn-link btn-sm p-0">View all tasks</a>
+                            </li>
+                        </ul>
+                    {% else %}
+                        <p class="text-muted small">No tasks associated</p>
+                    {% endif %}
+                    <h6 class="mt-2">
+                        Calls <small>({{ contact.calls.count }})</small>
+                    </h6>
+                    {% if contact.calls.all %}
+                        <ul class="list-group list-group-flush mb-2">
+                            {% for call in contact.calls.all|slice:":5" %}
+                                <li class="list-group-item px-0 py-1 border-0">
+                                    <a href="{% url 'activities:call-detail' call.pk %}">{{ call.subject }}</a>
+                                    <small class="text-muted float-end">
+                                        {{ call.call_time|date:"Y-m-d H:i" }} |
+                                        {{ call.get_status_display }}
+                                    </small>
+                                </li>
+                            {% endfor %}
+                            <li class="list-group-item px-0 py-1 border-0">
+                                <a href="{% url 'activities:call-list' %}?related_to_contact={{ contact.pk }}"
+                                   class="btn btn-link btn-sm p-0">View all calls</a>
+                            </li>
+                        </ul>
+                    {% else %}
+                        <p class="text-muted small">No calls associated</p>
+                    {% endif %}
+                    <h6 class="mt-2">
+                        Meetings <small>({{ contact.meetings.count }})</small>
+                    </h6>
+                    {% if contact.meetings.all %}
+                        <ul class="list-group list-group-flush mb-0">
+                            {% for meeting in contact.meetings.all|slice:":5" %}
+                                <li class="list-group-item px-0 py-1 border-0">
+                                    <a href="{% url 'activities:meeting-detail' meeting.pk %}">{{ meeting.subject }}</a>
+                                    <small class="text-muted float-end">
+                                        {{ meeting.start_time|date:"Y-m-d H:i" }} |
+                                        {{ meeting.get_status_display }}
+                                    </small>
+                                </li>
+                            {% endfor %}
+                            <li class="list-group-item px-0 py-1 border-0">
+                                <a href="{% url 'activities:meeting-list' %}?related_to_contact={{ contact.pk }}"
+                                   class="btn btn-link btn-sm p-0">View all meetings</a>
+                            </li>
+                        </ul>
+                    {% else %}
+                        <p class="text-muted small mb-0">No meetings associated</p>
+                    {% endif %}
+                </div>
+            </div>
+            {# Related deals card #}
+            {% if contact.deals.all %}
+                <div class="card mb-4 shadow-sm">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <span>Related Deals</span>
+                        <a href="{% url 'sales_pipeline:deal-create' %}?contact={{ contact.pk }}"
+                           class="btn btn-sm btn-success">+ Add Deal</a>
+                    </div>
+                    <ul class="list-group list-group-flush">
+                        {% for deal in contact.deals.all|slice:":5" %}
+                            <li class="list-group-item">
+                                <a href="{% url 'sales_pipeline:deal-detail' deal.pk %}">{{ deal.deal_id|default:deal.name }}</a>
+                                <small class="text-muted float-end">
+                                    {{ deal.get_stage_display }} |
+                                    {{ deal.amount|floatformat:0 }}
+                                </small>
+                            </li>
+                        {% endfor %}
+                        <li class="list-group-item">
+                            <a href="{% url 'sales_pipeline:deal-list' %}?primary_contact={{ contact.pk }}"
+                               class="btn btn-link btn-sm p-0">View all deals</a>
+                        </li>
+                    </ul>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+{% endblock %}

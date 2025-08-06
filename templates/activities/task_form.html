@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+
+{% block title %}{{ form_title }}{% endblock %}
+
+{% block content %}
+<h2>{{ form_title }}</h2>
+<hr>
+<form method="post">
+    {% csrf_token %}
+
+    {# Basic field loop rendering #}
+    {% for field in form %}
+    <div class="mb-3">
+        <label for="{{ field.id_for_label }}" class="form-label">{{ field.label }}{% if field.field.required %} <span style="color:red">*</span>{% endif %}</label>
+        {{ field }} {# Render the field widget directly #}
+        {% if field.help_text %}
+            <small class="form-text text-muted">{{ field.help_text|safe }}</small>
+        {% endif %}
+        {% for error in field.errors %}
+            <div class="invalid-feedback d-block" style="color: red;">{{ error }}</div> {# Simple error display #}
+        {% endfor %}
+    </div>
+    {% endfor %}
+
+    <button type="submit" class="btn btn-success">Save Task</button>
+    {# Determine cancel URL based on whether it's an update or create #}
+    {% if object %} {# 'object' is available in UpdateView context #}
+    <a href="{% url 'activities:task-detail' object.pk %}" class="btn btn-outline-secondary">Cancel</a>
+    {% else %}
+    <a href="{% url 'activities:task-list' %}" class="btn btn-outline-secondary">Cancel</a>
+    {% endif %}
+</form>
+{{ form.media }}
+{% endblock %}

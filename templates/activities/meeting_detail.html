@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+
+{% block title %}Meeting: {{ meeting.subject }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">{{ meeting.subject }}</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <a href="{% url 'activities:meeting-update' meeting.pk %}" class="btn btn-sm btn-primary me-2">Edit</a>
+        <a href="{% url 'activities:meeting-delete' meeting.pk %}" class="btn btn-sm btn-danger">Delete</a>
+        <a href="{% url 'activities:meeting-list' %}" class="btn btn-sm btn-outline-secondary ms-2">Back to List</a>
+    </div>
+</div>
+
+<h4>Details</h4>
+<dl class="row">
+    <dt class="col-sm-3">Subject</dt><dd class="col-sm-9">{{ meeting.subject }}</dd>
+    <dt class="col-sm-3">Start Time</dt><dd class="col-sm-9">{{ meeting.start_time|date:"Y-m-d H:i"|default:"--" }}</dd>
+    <dt class="col-sm-3">End Time</dt><dd class="col-sm-9">{{ meeting.end_time|date:"Y-m-d H:i"|default:"--" }}</dd>
+    <dt class="col-sm-3">Location</dt><dd class="col-sm-9">{{ meeting.location|default:"--" }}</dd>
+    <dt class="col-sm-3">Status</dt><dd class="col-sm-9">{{ meeting.get_status_display }}</dd>
+     <dt class="col-sm-3">Related To</dt>
+    <dd class="col-sm-9">
+        {% if meeting.related_to_account %}<div><a href="{% url 'crm_entities:account-detail' meeting.related_to_account.pk %}">Account: {{ meeting.related_to_account.name }}</a></div>{% endif %}
+        {% if meeting.related_to_contact %}<div><a href="{% url 'crm_entities:contact-detail' meeting.related_to_contact.pk %}">Contact: {{ meeting.related_to_contact.full_name }}</a></div>{% endif %}
+        {% if meeting.related_to_lead %}<div><a href="{% url 'crm_entities:lead-detail' meeting.related_to_lead.pk %}">Lead: {{ meeting.related_to_lead.full_name }}</a></div>{% endif %}
+        {% if meeting.related_to_deal %}<div><a href="{% url 'sales_pipeline:deal-detail' meeting.related_to_deal.pk %}">Deal: {{ meeting.related_to_deal }}</a></div>{% endif %}
+         {% if not meeting.related_to_account and not meeting.related_to_contact and not meeting.related_to_lead and not meeting.related_to_deal %}--{% endif %}
+    </dd>
+    <dt class="col-sm-3">Assigned To</dt>
+    <dd class="col-sm-9">
+        {% if meeting.assigned_to %}
+            {{ meeting.assigned_to.get_full_name|default:meeting.assigned_to.username }}
+        {% else %}
+            --
+        {% endif %}
+    </dd>
+    <dt class="col-sm-3">Created By</dt>
+     <dd class="col-sm-9">
+         {% if meeting.created_by %}
+             {{ meeting.created_by.get_full_name|default:meeting.created_by.username }}
+         {% else %}
+             System/Unknown
+         {% endif %}
+          on {{ meeting.created_at|date:"Y-m-d H:i"|default:"N/A" }}
+     </dd>
+    <dt class="col-sm-3">Last Updated</dt><dd class="col-sm-9">{{ meeting.updated_at|date:"Y-m-d H:i" }}</dd>
+</dl>
+
+<h4>Description</h4>
+<div class="card">
+    <div class="card-body bg-light">
+      {{ meeting.description|linebreaksbr|default:"No description provided." }}
+    </div>
+</div>
+<hr>
+
+{% endblock %}

@@ -1,0 +1,194 @@
+{% extends "base.html" %}
+{% load humanize %}
+{% load crispy_forms_tags %}
+{# In case crispy is needed elsewhere #}
+{% block title %}Quote: {{ quote.quote_id|default:"New Quote" }}{% endblock %}
+{% block content %}
+    {# --- Header Row --- #}
+    <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+        <h1 class="h2">
+            Quote {{ quote.quote_id|default:"N/A" }} <span class="badge bg-info text-dark ms-2">{{ quote.get_status_display }}</span>
+        </h1>
+        <div class="btn-toolbar mb-2 mb-md-0">
+            <a href="{% url 'sales_pipeline:quote-update' quote.pk %}"
+               class="btn btn-sm btn-primary me-2">Edit</a>
+            <a href="{% url 'sales_pipeline:quote-delete' quote.pk %}"
+               class="btn btn-sm btn-danger">Delete</a>
+            {% if user.is_admin_role %}
+                <a href="{% url 'sales_pipeline:quote-export' %}?id={{ quote.pk }}"
+                   class="btn btn-sm btn-outline-success me-2"
+                   title="Export this Quote (Admin only)">Export</a>
+            {% endif %}
+            <a href="{% url 'sales_pipeline:quote-list' %}"
+               class="btn btn-sm btn-outline-secondary ms-2">Back to List</a>
+        </div>
+    </div>
+    <div class="row g-4">
+        <div class="col-md-12">
+            {# Single Column Layout #}
+            {# --- Details Card --- #}
+            <div class="card mb-4 shadow-sm">
+                <div class="card-header">Quote Details</div>
+                <div class="card-body">
+                    <p>
+                        <strong>Quote ID:</strong> {{ quote.quote_id|default:"Not generated" }}
+                    </p>
+                    <p>
+                        <strong>Account:</strong>
+                        {% if quote.account %}
+                            <a href="{% url 'crm_entities:account-detail' quote.account.pk %}">{{ quote.account.name }}</a>
+                        {% else %}
+                            --
+                        {% endif %}
+                    </p>
+                    <p>
+                        <strong>Associated Deal:</strong>
+                        {% if quote.deal %}
+                            <a href="{% url 'sales_pipeline:deal-detail' quote.deal.pk %}">{{ quote.deal }}</a>
+                        {% else %}
+                            --
+                        {% endif %}
+                    </p>
+                    <p>
+                        <strong>Contact Person:</strong>
+                        {% if quote.contact %}
+                            <a href="{% url 'crm_entities:contact-detail' quote.contact.pk %}">{{ quote.contact.full_name }}</a>
+                        {% else %}
+                            --
+                        {% endif %}
+                    </p>
+                    <p>
+                        <strong>Status:</strong> <span class="badge bg-info text-dark">{{ quote.get_status_display }}</span>
+                    </p>
+                    <p>
+                        <strong>Total Amount:</strong> {{ quote.total_amount|default:"0.00"|intcomma }}
+                    </p>
+                    <p>
+                        <strong>Presented Date:</strong> {{ quote.presented_date|date:"Y-m-d"|default:"N/A" }}
+                    </p>
+                    <p>
+                        <strong>Validity Period:</strong> {{ quote.validity_days }} days
+                    </p>
+                    <p>
+                        <strong>Expiry Date:</strong> {{ quote.expiry_date|date:"Y-m-d"|default:"N/A" }}
+                    </p>
+                    <p>
+                        <strong>Assigned To:</strong>
+                        {% if quote.assigned_to %}
+                            {{ quote.assigned_to.get_full_name|default:quote.assigned_to.username }}
+                        {% else %}
+                            --
+                        {% endif %}
+                    </p>
+                    <hr>
+                    <p class="card-text">
+                        <small class="text-muted">
+                            Created By:
+                            {% if quote.created_by %}
+                                {{ quote.created_by.get_full_name|default:quote.created_by.username }}
+                            {% else %}
+                                System/Unknown
+                            {% endif %}
+                            on {{ quote.created_at|date:"Y-m-d H:i"|default:"N/A" }}
+                            <br>
+                            Last Updated: {{ quote.updated_at|date:"Y-m-d H:i" }}
+                        </small>
+                    </p>
+                </div>
+            </div>
+            {# --- Notes Card --- #}
+            <div class="card mb-4 shadow-sm">
+                <div class="card-header">Notes</div>
+                <div class="card-body">{{ quote.notes|linebreaksbr|default:"No notes added." }}</div>
+            </div>
+            {# --- Related Activities (via Deal) Card --- #}
+            {% if quote.deal %}
+                {# Only show if quote is linked to a deal #}
+                <div class="card mb-4 shadow-sm">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <span>Related Activities (via Deal: <a href="{% url 'sales_pipeline:deal-detail' quote.deal.pk %}">{{ quote.deal }}</a>)</span>
+                        <div>
+                            {# Pass deal pk to pre-fill forms #}
+                            <a href="{% url 'activities:task-create' %}?deal={{ quote.deal.pk }}"
+                               class="btn btn-sm btn-success"
+                               title="Add Task">+T</a>
+                            <a href="{% url 'activities:call-create' %}?deal={{ quote.deal.pk }}"
+                               class="btn btn-sm btn-success ms-1"
+                               title="Log Call">+C</a>
+                            <a href="{% url 'activities:meeting-create' %}?deal={{ quote.deal.pk }}"
+                               class="btn btn-sm btn-success ms-1"
+                               title="Add Meeting">+M</a>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        {# Combine or list separately - use quote.deal.tasks etc #}
+                        <h6>
+                            Tasks <small>({{ quote.deal.tasks.count }})</small>
+                        </h6>
+                        {% if quote.deal.tasks.all %}
+                            <ul class="list-group list-group-flush mb-2">
+                                {% for task in quote.deal.tasks.all|slice:":5" %}
+                                    {# Show recent 5 #}
+                                    <li class="list-group-item px-0 py-1 border-0">
+                                        <a href="{% url 'activities:task-detail' task.pk %}">{{ task.subject }}</a>
+                                        <small class="text-muted float-end">Due: {{ task.due_date|date:"Y-m-d"|default:"None" }} | {{ task.get_status_display }}</small>
+                                    </li>
+                                {% endfor %}
+                                <li class="list-group-item px-0 py-1 border-0">
+                                    <a href="{% url 'activities:task-list' %}?related_to_deal={{ quote.deal.pk }}"
+                                       class="btn btn-link btn-sm p-0">View all tasks for this deal...</a>
+                                </li>
+                            </ul>
+                        {% else %}
+                            <p class="text-muted small">No tasks associated with the related deal.</p>
+                        {% endif %}
+                        <h6 class="mt-2">
+                            Calls <small>({{ quote.deal.calls.count }})</small>
+                        </h6>
+                        {% if quote.deal.calls.all %}
+                            <ul class="list-group list-group-flush mb-2">
+                                {% for call in quote.deal.calls.all|slice:":5" %}
+                                    {# Show recent 5 #}
+                                    <li class="list-group-item px-0 py-1 border-0">
+                                        <a href="{% url 'activities:call-detail' call.pk %}">{{ call.subject }}</a>
+                                        <small class="text-muted float-end">{{ call.call_time|date:"Y-m-d H:i" }} | {{ call.get_status_display }}</small>
+                                    </li>
+                                {% endfor %}
+                                <li class="list-group-item px-0 py-1 border-0">
+                                    <a href="{% url 'activities:call-list' %}?related_to_deal={{ quote.deal.pk }}"
+                                       class="btn btn-link btn-sm p-0">View all calls for this deal...</a>
+                                </li>
+                            </ul>
+                        {% else %}
+                            <p class="text-muted small">No calls associated with the related deal.</p>
+                        {% endif %}
+                        <h6 class="mt-2">
+                            Meetings <small>({{ quote.deal.meetings.count }})</small>
+                        </h6>
+                        {% if quote.deal.meetings.all %}
+                            <ul class="list-group list-group-flush mb-0">
+                                {% for meeting in quote.deal.meetings.all|slice:":5" %}
+                                    {# Show recent 5 #}
+                                    <li class="list-group-item px-0 py-1 border-0">
+                                        <a href="{% url 'activities:meeting-detail' meeting.pk %}">{{ meeting.subject }}</a>
+                                        <small class="text-muted float-end">{{ meeting.start_time|date:"Y-m-d H:i" }} | {{ meeting.get_status_display }}</small>
+                                    </li>
+                                {% endfor %}
+                                <li class="list-group-item px-0 py-1 border-0">
+                                    <a href="{% url 'activities:meeting-list' %}?related_to_deal={{ quote.deal.pk }}"
+                                       class="btn btn-link btn-sm p-0">View all meetings for this deal...</a>
+                                </li>
+                            </ul>
+                        {% else %}
+                            <p class="text-muted small mb-0">No meetings associated with the related deal.</p>
+                        {% endif %}
+                    </div>
+                </div>
+            {% endif %}
+            {# End check for quote.deal #}
+            {# --- END Related Activities Card --- #}
+        </div>
+        {# End Column #}
+    </div>
+    {# End Row #}
+{% endblock %}

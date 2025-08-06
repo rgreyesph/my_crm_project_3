@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+
+{% block title %}Confirm Delete{% endblock %}
+
+{% block content %}
+<h2>Confirm Delete</h2>
+<hr>
+<p>Are you sure you want to delete the lead: <strong>{{ lead.full_name }}</strong>?</p>
+
+<form method="post">
+    {% csrf_token %}
+    <button type="submit" class="btn btn-danger">Confirm Delete</button>
+    <a href="{% url 'crm_entities:lead-detail' lead.pk %}" class="btn btn-outline-secondary">Cancel</a>
+</form>
+{% endblock %}

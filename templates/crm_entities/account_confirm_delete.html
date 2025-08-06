@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% load crispy_forms_tags %} {# Load if needed, though usually not for delete confirm #}
+
+{% block title %}Confirm Delete Account{% endblock %}
+
+{% block content %}
+<h2>Delete Account: {{ account.name }}</h2>
+<hr>
+<p>Are you sure you want to delete the account "<strong>{{ account.name }}</strong>"?</p>
+<p><strong class="text-danger">Warning:</strong> Deleting this account may also delete related records depending on system setup (e.g., Deals, Quotes if CASCADE delete is used). Associated Contacts might be kept but unlinked if SET_NULL is used.</p> {# Add appropriate warnings #}
+
+<form method="post">
+    {% csrf_token %}
+    {# Optionally add crispy button: {% crispy form %} #}
+    <button type="submit" class="btn btn-danger">Yes, Delete</button>
+    {# Link back to the detail page of the object being deleted #}
+    <a href="{% url 'crm_entities:account-detail' account.pk %}" class="btn btn-outline-secondary">Cancel</a>
+    {# *** Ensure NO incorrect url tags like contact-detail are here *** #}
+</form>
+
+{% endblock %}

@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+
+{% block title %}Task: {{ task.subject }}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">{{ task.subject }}</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <a href="{% url 'activities:task-update' task.pk %}" class="btn btn-sm btn-primary me-2">Edit</a>
+        <a href="{% url 'activities:task-delete' task.pk %}" class="btn btn-sm btn-danger">Delete</a>
+        <a href="{% url 'activities:task-list' %}" class="btn btn-sm btn-outline-secondary ms-2">Back to List</a>
+    </div>
+</div>
+
+<h4>Details</h4>
+<dl class="row">
+    <dt class="col-sm-3">Subject</dt><dd class="col-sm-9">{{ task.subject }}</dd>
+    <dt class="col-sm-3">Status</dt><dd class="col-sm-9">{{ task.get_status_display }}</dd>
+    <dt class="col-sm-3">Priority</dt><dd class="col-sm-9">{{ task.get_priority_display }}</dd>
+    <dt class="col-sm-3">Due Date</dt><dd class="col-sm-9">{{ task.due_date|date:"Y-m-d"|default:"--" }}</dd>
+    <dt class="col-sm-3">Related To</dt>
+    <dd class="col-sm-9">
+        {% if task.related_to_account %}<div><a href="{% url 'crm_entities:account-detail' task.related_to_account.pk %}">Account: {{ task.related_to_account.name }}</a></div>{% endif %}
+        {% if task.related_to_contact %}<div><a href="{% url 'crm_entities:contact-detail' task.related_to_contact.pk %}">Contact: {{ task.related_to_contact.full_name }}</a></div>{% endif %}
+        {% if task.related_to_lead %}<div><a href="{% url 'crm_entities:lead-detail' task.related_to_lead.pk %}">Lead: {{ task.related_to_lead.full_name }}</a></div>{% endif %}
+        {% if task.related_to_deal %}<div><a href="{% url 'sales_pipeline:deal-detail' task.related_to_deal.pk %}">Deal: {{ task.related_to_deal }}</a></div>{% endif %}
+         {% if not task.related_to_account and not task.related_to_contact and not task.related_to_lead and not task.related_to_deal %}--{% endif %}
+    </dd>
+    <dt class="col-sm-3">Assigned To</dt>
+    <dd class="col-sm-9">
+        {% if task.assigned_to %}
+            {{ task.assigned_to.get_full_name|default:task.assigned_to.username }}
+        {% else %}
+            --
+        {% endif %}
+    </dd>
+    <dt class="col-sm-3">Created By</dt>
+    <dd class="col-sm-9">
+        {% if task.created_by %}
+            {{ task.created_by.get_full_name|default:task.created_by.username }}
+        {% else %}
+            System/Unknown
+        {% endif %}
+         on {{ task.created_at|date:"Y-m-d H:i"|default:"N/A" }}
+    </dd>
+    <dt class="col-sm-3">Last Updated</dt><dd class="col-sm-9">{{ task.updated_at|date:"Y-m-d H:i" }}</dd>
+</dl>
+
+<h4>Description</h4>
+<div class="card">
+    <div class="card-body bg-light">
+      {{ task.description|linebreaksbr|default:"No description provided." }}
+    </div>
+</div>
+<hr>
+
+{% endblock %}

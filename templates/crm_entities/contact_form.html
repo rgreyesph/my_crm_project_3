@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% load crispy_forms_tags %} {# Load tags #}
+
+{% block title %}{{ form_title }}{% endblock %}
+
+{% block content %}
+<h2>{{ form_title }}</h2>
+<hr>
+<form method="post" autocomplete="off"> {# Ensure method is post #}
+    {% csrf_token %}
+
+    {# Use Crispy tag - it will use the helper defined in the form #}
+    {% crispy form %}
+
+    {# Buttons remain outside the crispy generated part, but inside the form #}
+    <div class="mt-3">
+        <button type="submit" class="btn btn-success">Save Contact</button>
+        {% if object %}
+            <a href="{% url 'crm_entities:contact-detail' object.pk %}" class="btn btn-outline-secondary">Cancel</a>
+        {% else %}
+            <a href="{% url 'crm_entities:contact-list' %}" class="btn btn-outline-secondary">Cancel</a>
+        {% endif %}
+    </div>
+</form>
+{{ form.media }}
+
+{% endblock %}

@@ -1,0 +1,226 @@
+{% extends "base.html" %}
+{% load humanize %}
+{# Load if using intcomma filter #}
+{% load static %}
+{# Load static if needed #}
+{% block title %}Deal: {{ deal.deal_id|default:deal.name }}{% endblock %}
+{# Block 1: Title #}
+{% block content %}
+    {# Block 2: Content - Opens Here #}
+    {# --- Header Row --- #}
+    <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+        <h1 class="h2">
+            {{ deal.name }} ({{ deal.deal_id|default:"N/A" }}) <span class="badge bg-info text-dark ms-2">{{ deal.get_stage_display }}</span>
+        </h1>
+        <div class="btn-toolbar mb-2 mb-md-0">
+            <a href="{% url 'sales_pipeline:deal-update' deal.pk %}"
+               class="btn btn-sm btn-primary me-2">Edit</a>
+            <a href="{% url 'sales_pipeline:deal-delete' deal.pk %}"
+               class="btn btn-sm btn-danger">Delete</a>
+            {% if user.is_admin_role %}
+                <a href="{% url 'sales_pipeline:deal-export' %}?id={{ deal.pk }}"
+                   class="btn btn-sm btn-outline-success me-2"
+                   title="Export this Deal (Admin only)">Export</a>
+            {% endif %}
+            <a href="{% url 'sales_pipeline:deal-list' %}"
+               class="btn btn-sm btn-outline-secondary ms-2">Back to List</a>
+        </div>
+    </div>
+    <div class="row g-4">
+        {# --- Main Details Column --- #}
+        <div class="col-md-7">
+            <div class="card mb-4 shadow-sm">
+                <div class="card-header">Deal Details</div>
+                <div class="card-body">
+                    <p>
+                        <strong>Name:</strong> {{ deal.name }}
+                    </p>
+                    <p>
+                        <strong>Deal ID:</strong> {{ deal.deal_id|default:"Not generated yet" }}
+                    </p>
+                    <p>
+                        <strong>Account:</strong>
+                        {% if deal.account %}
+                            <a href="{% url 'crm_entities:account-detail' deal.account.pk %}">{{ deal.account.name }}</a>
+                        {% else %}
+                            --
+                        {% endif %}
+                    </p>
+                    <p>
+                        <strong>Primary Contact:</strong>
+                        {% if deal.primary_contact %}
+                            <a href="{% url 'crm_entities:contact-detail' deal.primary_contact.pk %}">{{ deal.primary_contact.full_name }}</a>
+                        {% else %}
+                            --
+                        {% endif %}
+                    </p>
+                    <p>
+                        <strong>Stage:</strong> <span class="badge bg-primary">{{ deal.get_stage_display }}</span>
+                    </p>
+                    <p>
+                        <strong>Probability:</strong> {{ deal.probability }}%
+                    </p>
+                    <p>
+                        <strong>Amount:</strong> {{ deal.amount|default:"0.00"|intcomma }} {{ deal.currency }}
+                    </p>
+                    <p>
+                        <strong>Close Date:</strong> {{ deal.close_date|date:"Y-m-d"|default:"--" }}
+                    </p>
+                    <p>
+                        <strong>Assigned To:</strong>
+                        {% if deal.assigned_to %}
+                            {{ deal.assigned_to.get_full_name|default:deal.assigned_to.username }}
+                        {% else %}
+                            --
+                        {% endif %}
+                    </p>
+                    <hr>
+                    <p class="card-text">
+                        <small class="text-muted">
+                            Created By:
+                            {% if deal.created_by %}
+                                {{ deal.created_by.get_full_name|default:deal.created_by.username }}
+                            {% else %}
+                                System/Unknown
+                            {% endif %}
+                            on {{ deal.created_at|date:"Y-m-d H:i"|default:"N/A" }}
+                            <br>
+                            Last Updated: {{ deal.updated_at|date:"Y-m-d H:i" }}
+                        </small>
+                    </p>
+                </div>
+            </div>
+            <div class="card mb-4 shadow-sm">
+                <div class="card-header">Description</div>
+                <div class="card-body">{{ deal.description|linebreaksbr|default:"No description provided." }}</div>
+            </div>
+        </div>
+        {# End Main details column #}
+        {# --- Related Items Column --- #}
+        <div class="col-md-5">
+            {# --- Related Quotes Card --- #}
+            <div class="card mb-4 shadow-sm">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <span>Related Quotes ({{ deal.quotes.count }})</span>
+                    <a href="{% url 'sales_pipeline:quote-create' %}?deal={{ deal.pk }}"
+                       class="btn btn-sm btn-success">+ Add Quote</a>
+                </div>
+                {% if deal.quotes.all %}
+                    <ul class="list-group list-group-flush">
+                        {% for quote in deal.quotes.all|slice:":5" %}
+                            <li class="list-group-item d-flex justify-content-between align-items-center px-3 py-2">
+                                <div>
+                                    {# Conditional Link for Quote based on permission #}
+                                    {% if request.user == quote.assigned_to or request.user == quote.created_by or request.user.is_admin_role or user.is_manager_role %}
+                                        <a href="{% url 'sales_pipeline:quote-detail' quote.pk %}">{{ quote.quote_id|default:"N/A" }}</a>
+                                    {% else %}
+                                        <span title="Details restricted (assigned to {{ quote.assigned_to.username|default:'another user' }})">{{ quote.quote_id|default:"N/A" }}</span> (Restricted)
+                                    {% endif %}
+                                    <small class="d-block text-muted">{{ quote.get_status_display }} | Expires: {{ quote.expiry_date|date:"Y-m-d"|default:"N/A" }}</small>
+                                </div>
+                                <span class="badge bg-secondary rounded-pill">{{ quote.total_amount|default:"0"|intcomma }}</span>
+                            </li>
+                        {% endfor %}
+                        {# End quote loop #}
+                        {% if deal.quotes.count > 5 %}
+                            <li class="list-group-item px-3 py-1 text-center">
+                                <a href="{% url 'sales_pipeline:quote-list' %}?deal={{ deal.pk }}"
+                                   class="btn btn-link btn-sm p-0">View all quotes for this deal...</a>
+                            </li>
+                        {% endif %}
+                    </ul>
+                {% else %}
+                    <div class="card-body text-muted small">No quotes associated with this deal.</div>
+                {% endif %}
+                {# End if deal.quotes.all #}
+            </div>
+            {# End Related Quotes Card #}
+            {# --- Related Activities Card --- #}
+            <div class="card mb-4 shadow-sm">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <span>Related Activities</span>
+                    <div>
+                        <a href="{% url 'activities:task-create' %}?deal={{ deal.pk }}"
+                           class="btn btn-sm btn-success"
+                           title="Add Task">+T</a>
+                        <a href="{% url 'activities:call-create' %}?deal={{ deal.pk }}"
+                           class="btn btn-sm btn-success ms-1"
+                           title="Log Call">+C</a>
+                        <a href="{% url 'activities:meeting-create' %}?deal={{ deal.pk }}"
+                           class="btn btn-sm btn-success ms-1"
+                           title="Add Meeting">+M</a>
+                    </div>
+                </div>
+                <div class="card-body">
+                    {# Tasks #}
+                    <h6>
+                        Tasks <small>({{ deal.tasks.count }})</small>
+                    </h6>
+                    {% if deal.tasks.all %}
+                        <ul class="list-group list-group-flush mb-2">
+                            {% for task in deal.tasks.all|slice:":5" %}
+                                <li class="list-group-item px-0 py-1 border-0">
+                                    <a href="{% url 'activities:task-detail' task.pk %}">{{ task.subject }}</a>
+                                    <small class="text-muted float-end">Due: {{ task.due_date|date:"Y-m-d"|default:"None" }} | {{ task.get_status_display }}</small>
+                                </li>
+                            {% endfor %}
+                            <li class="list-group-item px-0 py-1 border-0">
+                                <a href="{% url 'activities:task-list' %}?related_to_deal={{ deal.pk }}"
+                                   class="btn btn-link btn-sm p-0">View all tasks...</a>
+                            </li>
+                        </ul>
+                    {% else %}
+                        <p class="text-muted small">No tasks associated.</p>
+                    {% endif %}
+                    {# End if deal.tasks.all #}
+                    {# Calls #}
+                    <h6 class="mt-2">
+                        Calls <small>({{ deal.calls.count }})</small>
+                    </h6>
+                    {% if deal.calls.all %}
+                        <ul class="list-group list-group-flush mb-2">
+                            {% for call in deal.calls.all|slice:":5" %}
+                                <li class="list-group-item px-0 py-1 border-0">
+                                    <a href="{% url 'activities:call-detail' call.pk %}">{{ call.subject }}</a>
+                                    <small class="text-muted float-end">{{ call.call_time|date:"Y-m-d H:i" }} | {{ call.get_status_display }}</small>
+                                </li>
+                            {% endfor %}
+                            <li class="list-group-item px-0 py-1 border-0">
+                                <a href="{% url 'activities:call-list' %}?related_to_deal={{ deal.pk }}"
+                                   class="btn btn-link btn-sm p-0">View all calls...</a>
+                            </li>
+                        </ul>
+                    {% else %}
+                        <p class="text-muted small">No calls associated.</p>
+                    {% endif %}
+                    {# End if deal.calls.all #}
+                    {# Meetings #}
+                    <h6 class="mt-2">
+                        Meetings <small>({{ deal.meetings.count }})</small>
+                    </h6>
+                    {% if deal.meetings.all %}
+                        <ul class="list-group list-group-flush mb-0">
+                            {% for meeting in deal.meetings.all|slice:":5" %}
+                                <li class="list-group-item px-0 py-1 border-0">
+                                    <a href="{% url 'activities:meeting-detail' meeting.pk %}">{{ meeting.subject }}</a>
+                                    <small class="text-muted float-end">{{ meeting.start_time|date:"Y-m-d H:i" }} | {{ meeting.get_status_display }}</small>
+                                </li>
+                            {% endfor %}
+                            <li class="list-group-item px-0 py-1 border-0">
+                                <a href="{% url 'activities:meeting-list' %}?related_to_deal={{ deal.pk }}"
+                                   class="btn btn-link btn-sm p-0">View all meetings...</a>
+                            </li>
+                        </ul>
+                    {% else %}
+                        <p class="text-muted small mb-0">No meetings associated.</p>
+                    {% endif %}
+                    {# End if deal.meetings.all #}
+                </div>
+            </div>
+            {# End Related Activities Card #}
+        </div>
+        {# End Related items column #}
+    </div>
+    {# End Row #}
+{% endblock content %}
+{# Ensure this is the final closing tag #}

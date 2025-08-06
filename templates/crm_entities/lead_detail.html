@@ -1,0 +1,196 @@
+{% extends "base.html" %}
+{% load humanize %}
+{# Load if using intcomma #}
+{% block title %}Lead: {{ lead.full_name }}{% endblock %}
+{% block content %}
+    {# --- Header Row --- #}
+    <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+        <h1 class="h2">
+            {{ lead.full_name }} <span class="badge bg-secondary">{{ lead.get_status_display }}</span>
+        </h1>
+        <div class="btn-toolbar mb-2 mb-md-0">
+            {# --- CORRECTED Convert Button --- #}
+            {% if lead.status == 'QUALIFIED' %}
+                {# Only show if status is QUALIFIED #}
+                <form action="{% url 'crm_entities:lead-convert' lead.pk %}"
+                      method="post"
+                      class="me-2">
+                    {% csrf_token %}
+                    {# Use correct button text #}
+                    <button type="submit" class="btn btn-sm btn-success">Convert Lead</button>
+                </form>
+            {% endif %}
+            {# --- End Convert Button --- #}
+            <a href="{% url 'crm_entities:lead-update' lead.pk %}"
+               class="btn btn-sm btn-primary me-2">Edit</a>
+            <a href="{% url 'crm_entities:lead-delete' lead.pk %}"
+               class="btn btn-sm btn-danger">Delete</a>
+            {% if user.is_admin_role %}
+                <a href="{% url 'crm_entities:lead-export' %}?id={{ lead.pk }}"
+                   class="btn btn-sm btn-outline-success me-2"
+                   title="Export this Lead (Admin only)">Export</a>
+            {% endif %}
+            <a href="{% url 'crm_entities:lead-list' %}"
+               class="btn btn-sm btn-outline-secondary ms-2">Back to List</a>
+        </div>
+    </div>
+    <div class="row g-4">
+        <div class="col-md-12">
+            {# Single column layout #}
+            {# --- Details Card --- #}
+            <div class="card mb-4 shadow-sm">
+                <div class="card-header">Lead Details</div>
+                <div class="card-body">
+                    <p>
+                        <strong>Full Name:</strong> {{ lead.full_name }}
+                    </p>
+                    <p>
+                        <strong>Company:</strong> {{ lead.company_name|default:"--" }}
+                    </p>
+                    <p>
+                        <strong>Title:</strong> {{ lead.title|default:"--" }}
+                    </p>
+                    <p>
+                        <strong>Department:</strong> {{ lead.department|default:"--" }}
+                    </p>
+                    <p>
+                        <strong>Email:</strong>
+                        {% if lead.email %}
+                            <a href="mailto:{{ lead.email }}">{{ lead.email }}</a>
+                        {% else %}
+                            --
+                        {% endif %}   
+                    </p>
+                    <p>
+                        <strong>Work Phone:</strong> {{ lead.work_phone|default:"--" }}
+                    </p>
+                    <p>
+                        <strong>Mobile Phone 1:</strong> {{ lead.mobile_phone_1|default:"--" }}
+                    </p>
+                    <p>
+                        <strong>Mobile Phone 2:</strong> {{ lead.mobile_phone_2|default:"--" }}
+                    </p>
+                    <p>
+                        <strong>Status:</strong> <span class="badge bg-info text-dark">{{ lead.get_status_display }}</span>
+                    </p>
+                    <p>
+                        <strong>Source:</strong> <span class="badge bg-light text-dark">{{ lead.get_source_display|default:"--" }}</span>
+                    </p>
+                    <p>
+                        <strong>Territory:</strong> {{ lead.territory.name|default:"--" }}
+                    </p>
+                    <p>
+                        <strong>Assigned To:</strong>
+                        {% if lead.assigned_to %}
+                            {{ lead.assigned_to.get_full_name|default:lead.assigned_to.username }}
+                        {% else %}
+                            --
+                        {% endif %}
+                    </p>
+                    <hr>
+                    <p class="card-text">
+                        <small class="text-muted">
+                            Created By:
+                            {% if lead.created_by %}
+                                {{ lead.created_by.get_full_name|default:lead.created_by.username }}
+                            {% else %}
+                                System/Unknown
+                            {% endif %}
+                            on {{ lead.created_at|date:"Y-m-d H:i"|default:"N/A" }}
+                            <br>
+                            Last Updated: {{ lead.updated_at|date:"Y-m-d H:i" }}
+                        </small>
+                    </p>
+                </div>
+            </div>
+            {# --- Address Card --- #}
+            <div class="card mb-4 shadow-sm">
+                <div class="card-header">Address</div>
+                <div class="card-body">{{ lead.address|linebreaksbr|default:"No address added." }}</div>
+            </div>
+            {# --- Notes Card --- #}
+            <div class="card mb-4 shadow-sm">
+                <div class="card-header">Notes</div>
+                <div class="card-body">{{ lead.notes|linebreaksbr|default:"No notes added." }}</div>
+            </div>
+            {# --- Related Activities Card --- #}
+            <div class="card mb-4 shadow-sm">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <span>Related Activities</span>
+                    <div>
+                        {# Pass lead pk to pre-fill forms #}
+                        <a href="{% url 'activities:task-create' %}?lead={{ lead.pk }}"
+                           class="btn btn-sm btn-success"
+                           title="Add Task">+T</a>
+                        <a href="{% url 'activities:call-create' %}?lead={{ lead.pk }}"
+                           class="btn btn-sm btn-success ms-1"
+                           title="Log Call">+C</a>
+                        <a href="{% url 'activities:meeting-create' %}?lead={{ lead.pk }}"
+                           class="btn btn-sm btn-success ms-1"
+                           title="Add Meeting">+M</a>
+                    </div>
+                </div>
+                <div class="card-body">
+                    {# Combine or list separately #}
+                    <h6>
+                        Tasks <small>({{ lead.tasks.count }})</small>
+                    </h6>
+                    {% if lead.tasks.all %}
+                        <ul class="list-group list-group-flush mb-2">
+                            {% for task in lead.tasks.all|slice:":5" %}
+                                <li class="list-group-item px-0 py-1 border-0">
+                                    <a href="{% url 'activities:task-detail' task.pk %}">{{ task.subject }}</a><small class="text-muted float-end">Due: {{ task.due_date|date:"Y-m-d"|default:"None" }} | {{ task.get_status_display }}</small>
+                                </li>
+                            {% endfor %}
+                            <li class="list-group-item px-0 py-1 border-0">
+                                <a href="{% url 'activities:task-list' %}?related_to_lead={{ lead.pk }}"
+                                   class="btn btn-link btn-sm p-0">View all tasks...</a>
+                            </li>
+                        </ul>
+                    {% else %}
+                        <p class="text-muted small">No tasks associated.</p>
+                    {% endif %}
+                    <h6 class="mt-2">
+                        Calls <small>({{ lead.calls.count }})</small>
+                    </h6>
+                    {% if lead.calls.all %}
+                        <ul class="list-group list-group-flush mb-2">
+                            {% for call in lead.calls.all|slice:":5" %}
+                                <li class="list-group-item px-0 py-1 border-0">
+                                    <a href="{% url 'activities:call-detail' call.pk %}">{{ call.subject }}</a><small class="text-muted float-end">{{ call.call_time|date:"Y-m-d H:i" }} | {{ call.get_status_display }}</small>
+                                </li>
+                            {% endfor %}
+                            <li class="list-group-item px-0 py-1 border-0">
+                                <a href="{% url 'activities:call-list' %}?related_to_lead={{ lead.pk }}"
+                                   class="btn btn-link btn-sm p-0">View all calls...</a>
+                            </li>
+                        </ul>
+                    {% else %}
+                        <p class="text-muted small">No calls associated.</p>
+                    {% endif %}
+                    <h6 class="mt-2">
+                        Meetings <small>({{ lead.meetings.count }})</small>
+                    </h6>
+                    {% if lead.meetings.all %}
+                        <ul class="list-group list-group-flush mb-0">
+                            {% for meeting in lead.meetings.all|slice:":5" %}
+                                <li class="list-group-item px-0 py-1 border-0">
+                                    <a href="{% url 'activities:meeting-detail' meeting.pk %}">{{ meeting.subject }}</a><small class="text-muted float-end">{{ meeting.start_time|date:"Y-m-d H:i" }} | {{ meeting.get_status_display }}</small>
+                                </li>
+                            {% endfor %}
+                            <li class="list-group-item px-0 py-1 border-0">
+                                <a href="{% url 'activities:meeting-list' %}?related_to_lead={{ lead.pk }}"
+                                   class="btn btn-link btn-sm p-0">View all meetings...</a>
+                            </li>
+                        </ul>
+                    {% else %}
+                        <p class="text-muted small mb-0">No meetings associated.</p>
+                    {% endif %}
+                </div>
+            </div>
+            {# --- End Related Activities Card --- #}
+        </div>
+        {# End Column #}
+    </div>
+    {# End Row #}
+{% endblock %}

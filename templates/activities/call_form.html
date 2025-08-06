@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}{{ form_title }}{% endblock %}
+{% block content %}
+    <h2>{{ form_title }}</h2>
+    <hr>
+    <form method="post">
+        {% csrf_token %}
+        {# Render form fields #}
+        {% for field in form %}
+            <div class="mb-3">
+                <label for="{{ field.id_for_label }}" class="form-label">
+                    {{ field.label }}
+                    {% if field.field.required %}<span style="color: red;">*</span>{% endif %}
+                </label>
+                {{ field }}
+                {# Render help text if available #}
+                {% if field.help_text %}<small class="form-text text-muted">{{ field.help_text|safe }}</small>{% endif %}
+                {# Render field errors #}
+                {% for error in field.errors %}<div class="invalid-feedback d-block" style="color: red;">{{ error }}</div>{% endfor %}
+            </div>
+        {% endfor %}
+        <button type="submit" class="btn btn-success">Save Call</button>
+        {# Conditional cancel URL based on update or create #}
+        {% if object %}
+            <a href="{% url 'activities:call-detail' object.pk %}"
+               class="btn btn-outline-secondary">Cancel</a>
+        {% else %}
+            <a href="{% url 'activities:call-list' %}"
+               class="btn btn-outline-secondary">Cancel</a>
+        {% endif %}
+    </form>
+    {{ form.media }}
+{% endblock %}

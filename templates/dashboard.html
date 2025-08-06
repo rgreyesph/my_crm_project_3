@@ -1,0 +1,479 @@
+{% extends "base.html" %}
+{% load static %}
+{% load humanize %}
+{% load crispy_forms_tags %}
+{# Load crispy tags #}
+{% block title %}{{ title|default:"Dashboard" }}{% endblock %}
+{% block content %}
+    {# --- Welcome Banner & User Info --- #}
+    <div class="p-4 mb-4 bg-light rounded-3">
+        <div class="container-fluid py-3">
+            <h1 class="display-6 fw-bold">Welcome, {{ user.first_name|default:user.username }}!</h1>
+            <p class="lead mb-1">Role: {{ user.get_role_display }}</p>
+            {% if user.territory %}
+                <p class="lead mb-1 text-muted">
+                    <small>Assigned Territory: {{ user.territory.name }}</small>
+                </p>
+            {% endif %}
+            {% if user.is_manager_role and user.managed_territories.all %}
+                <p class="lead mb-0 text-muted">
+                    <small>Managing Territories:
+                        {% for territory in user.managed_territories.all %}
+                            {{ territory.name }}
+                            {% if not forloop.last %},{% endif %}
+                        {% endfor %}
+                    </small>
+                </p>
+            {% endif %}
+        </div>
+    </div>
+    {# --- Quick Actions (Updated Spacing & Added Contact) --- #}
+    <div class="mb-4">
+        <h5>Quick Actions:</h5>
+        {# Group 1: CRM Entities - Use me-1 within group, me-3 at end #}
+        <a href="{% url 'crm_entities:account-create' %}"
+           class="btn btn-primary btn-sm me-1">+ New Account</a>
+        <a href="{% url 'crm_entities:contact-create' %}"
+           class="btn btn-primary btn-sm me-1">+ New Contact</a>
+        <a href="{% url 'crm_entities:lead-create' %}"
+           class="btn btn-success btn-sm me-3">+ New Lead</a> {# Larger margin after this group #}
+        {# Group 2: Activities - Use me-1 within group, me-3 at end #}
+        <a href="{% url 'activities:task-create' %}"
+           class="btn btn-info btn-sm text-white me-1">+ New Task</a>
+        <a href="{% url 'activities:call-create' %}"
+           class="btn btn-warning btn-sm text-dark me-1">+ Log Call</a>
+        <a href="{% url 'activities:meeting-create' %}"
+           class="btn btn-primary btn-sm me-3">+ New Meeting</a> {# Larger margin after this group #}
+        {# Group 3: Sales Pipeline - Use me-1 within group #}
+        <a href="{% url 'sales_pipeline:deal-create' %}"
+           class="btn btn-danger btn-sm me-1">+ New Deal</a>
+        <a href="{% url 'sales_pipeline:quote-create' %}"
+           class="btn btn-secondary btn-sm">+ New Quote</a> {# No margin needed after last button #}
+    </div>
+    <hr>
+    <div class="row g-4">
+        {# === COLUMN 1: Targets & Summaries === #}
+        <div class="col-lg-6">
+            {# ... Individual Target Card (Keep as is) ... #}
+            {% if not user.is_admin_role or user.is_manager_role %}
+                <div class="card mb-4 shadow-sm" style="background-color: #f8f9fa;">
+                    <div class="card-header">
+                        My Sales Target Progress
+                        {% if current_target %}({{ current_target.period_description }}){% endif %}
+                    </div>
+                    <div class="card-body">
+                        {% if current_target %}
+                            <h6 class="card-title mb-1">
+                                Target: {{ target_amount|floatformat:2|intcomma }} | Achieved: <span class="fw-bold">{{ achieved_amount|floatformat:2|intcomma }}</span>
+                            </h6>
+                            <div class="progress"
+                                 style="height: 25px"
+                                 title="{{ progress_percent }}%">
+                                <div class="progress-bar {% if progress_percent >= 100 %}bg-success{% elif progress_percent >= 75 %}bg-info{% elif progress_percent >= 50 %}bg-warning{% else %}bg-secondary{% endif %}"
+                                     role="progressbar"
+                                     style="width: {{ progress_percent }}%"
+                                     aria-valuenow="{{ progress_percent }}"
+                                     aria-valuemin="0"
+                                     aria-valuemax="100">{{ progress_percent }}%</div>
+                            </div>
+                        {% else %}
+                            <p class="text-muted mb-0">No sales target defined for you for the current period.</p>
+                        {% endif %}
+                    </div>
+                </div>
+            {% endif %}
+            {# ... Manager Team Aggregate Card (Keep as is) ... #}
+            {% if user.is_manager_role %}
+                <div class="card mb-4 shadow-sm" style="background-color: #f8f9fa;">
+                    <div class="card-header">Team Aggregate Progress (Current Period)</div>
+                    <div class="card-body">
+                        {% if team_target_total != 'N/A' %}
+                            <h6 class="card-title mb-1">
+                                Team Target: {{ team_target_total|floatformat:2|intcomma }} | Team Achieved: <span class="fw-bold">{{ team_achieved_total|floatformat:2|intcomma }}</span>
+                            </h6>
+                            <div class="progress"
+                                 style="height: 20px"
+                                 title="{{ team_progress_percent }}%">
+                                <div class="progress-bar bg-primary"
+                                     role="progressbar"
+                                     style="width: {{ team_progress_percent }}%"
+                                     aria-valuenow="{{ team_progress_percent }}"
+                                     aria-valuemin="0"
+                                     aria-valuemax="100">{{ team_progress_percent }}%</div>
+                            </div>
+                        {% else %}
+                            <p class="text-muted mb-0">Could not calculate team target progress.</p>
+                        {% endif %}
+                    </div>
+                </div>
+            {% endif %}
+            {# ... Admin Global Aggregate Card (Keep as is) ... #}
+            {% if user.is_admin_role %}
+                <div class="card mb-4 shadow-sm" style="background-color: #f8f9fa;">
+                    <div class="card-header">Company Aggregate Progress (Current Period Targets)</div>
+                    <div class="card-body">
+                        {% if global_target_total != 'N/A' %}
+                            <h6 class="card-title mb-1">
+                                Total Target: {{ global_target_total|floatformat:2|intcomma }} | Total Achieved: <span class="fw-bold">{{ global_achieved_total|floatformat:2|intcomma }}</span>
+                            </h6>
+                            <div class="progress"
+                                 style="height: 20px"
+                                 title="{{ global_progress_percent }}%">
+                                <div class="progress-bar bg-dark"
+                                     role="progressbar"
+                                     style="width: {{ global_progress_percent }}%"
+                                     aria-valuenow="{{ global_progress_percent }}"
+                                     aria-valuemin="0"
+                                     aria-valuemax="100">{{ global_progress_percent }}%</div>
+                            </div>
+                        {% else %}
+                            <p class="text-muted mb-0">Could not calculate global target progress.</p>
+                        {% endif %}
+                    </div>
+                </div>
+            {% endif %}
+            {# --- Lead Summary Card (UPDATED) - CRM Entities Group #}
+            <div class="card mb-4 shadow-sm" style="background-color: #e6f3ff;">
+                <div class="card-header">My Lead Summary</div>
+                <div class="card-body">
+                    <h6>Creation:</h6>
+                    <p>
+                        {{ leads_created_this_month }} this month <small class="text-muted">(vs {{ leads_created_last_month }} last month)</small>
+                    </p>
+                    {# ADDED Converted Count #}
+                    <p>
+                        <strong>Total Converted:</strong> {{ my_converted_leads_count|default:0 }}
+                    </p>
+                    <hr>
+                    <h6>Open Leads by Status:</h6>
+                    {% if my_leads_by_status %}
+                        {% for status, count in my_leads_by_status.items %}
+                            <span class="badge bg-info text-dark me-1">{{ status }}: {{ count }}</span>
+                        {% endfor %}
+                    {% else %}
+                        <p class="text-muted small mb-2">No open leads found.</p>
+                    {% endif %}
+                    <hr>
+                    <h6>Open Leads by Source:</h6>
+                    {% if my_leads_by_source %}
+                        {% for source, count in my_leads_by_source.items %}
+                            <span class="badge bg-secondary me-1">{{ source|default:"Unknown" }}: {{ count }}</span>
+                        {% endfor %}
+                    {% else %}
+                        <p class="text-muted small mb-0">No source data for open leads.</p>
+                    {% endif %}
+                </div>
+                <div class="card-footer text-end">
+                    <a href="{% url 'crm_entities:lead-list' %}">View All Leads</a>
+                </div>
+            </div>
+            {# --- End Lead Summary Card --- #}
+            {# ... Monthly Activity Summary Card (Keep as is) - Activities Group #}
+            <div class="card mb-4 shadow-sm" style="background-color: #fff3e6;">
+                <div class="card-header">My Monthly Activity Summary</div>
+                <div class="card-body">
+                    <ul class="list-unstyled mb-0">
+                        <li>
+                            <strong>Tasks Completed:</strong> {{ tasks_completed_this_month }} <small class="text-muted">(vs {{ tasks_completed_last_month }} last month)</small>
+                        </li>
+                        <li>
+                            <strong>Calls Held:</strong> {{ calls_held_this_month }} <small class="text-muted">(vs {{ calls_held_last_month }} last month)</small>
+                        </li>
+                        <li>
+                            <strong>Meetings Held:</strong> {{ meetings_held_this_month }} <small class="text-muted">(vs {{ meetings_held_last_month }} last month)</small>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+            {# ... Recent Items Card (Keep as is) - CRM Entities Group #}
+            <div class="card mb-4 shadow-sm" style="background-color: #e6f3ff;">
+                <div class="card-header">Recently Updated Items</div>
+                <div class="card-body">
+                    <h6>Accounts</h6>
+                    {% if my_recent_accounts %}
+                        <ul class="list-group list-group-flush list-group-numbered mb-2">
+                            {% for acc in my_recent_accounts %}
+                                <li class="list-group-item list-group-item-sm px-0 py-1 border-0">
+                                    <a href="{% url 'crm_entities:account-detail' acc.pk %}">{{ acc.name }}</a>
+                                </li>
+                            {% endfor %}
+                        </ul>
+                    {% else %}
+                        <p class="text-muted small mb-2">None.</p>
+                    {% endif %}
+                    <h6 class="mt-2">Contacts</h6>
+                    {% if my_recent_contacts %}
+                        <ul class="list-group list-group-flush list-group-numbered mb-0">
+                            {% for cont in my_recent_contacts %}
+                                <li class="list-group-item list-group-item-sm px-0 py-1 border-0">
+                                    <a href="{% url 'crm_entities:contact-detail' cont.pk %}">{{ cont.full_name }}</a>
+                                </li>
+                            {% endfor %}
+                        </ul>
+                    {% else %}
+                        <p class="text-muted small mb-0">None.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {# End Column 1 #}
+        {# === COLUMN 2: Activities & Open Pipeline === #}
+        <div class="col-lg-6">
+            {# ... Open Pipeline Card (Keep as is) - Sales Pipeline Group #}
+            <div class="card mb-4 shadow-sm" style="background-color: #f0e6ff;">
+                <div class="card-header">My Open Pipeline</div>
+                <div class="card-body">
+                    <p class="mb-2">
+                        <strong>Total Value:</strong> PHP {{ my_open_deals_raw_total|floatformat:2|intcomma }}
+                        <br>
+                        <strong class="text-success">Weighted Value:</strong> PHP {{ my_open_deals_weighted_total|floatformat:2|intcomma }}
+                    </p>
+                    <hr>
+                    <h6>
+                        Leads <span class="badge bg-secondary float-end">{{ my_open_leads.count }}</span>
+                    </h6>
+                    {% if my_open_leads %}
+                        <ul class="list-group list-group-flush mb-2">
+                            {% for lead in my_open_leads %}
+                                <li class="list-group-item list-group-item-sm px-0 py-1 border-0">
+                                    <a href="{% url 'crm_entities:lead-detail' lead.pk %}">{{ lead.full_name }}</a> <span class="badge bg-light text-dark float-end">{{ lead.get_status_display }}</span>
+                                </li>
+                            {% endfor %}
+                        </ul>
+                    {% else %}
+                        <p class="text-muted small">No open leads assigned.</p>
+                    {% endif %}
+                    <h6 class="mt-2">
+                        Deals <span class="badge bg-secondary float-end">{{ my_open_deals.count }}</span>
+                    </h6>
+                    {% if my_open_deals %}
+                        <ul class="list-group list-group-flush mb-2">
+                            {% for deal in my_open_deals %}
+                                <li class="list-group-item list-group-item-sm px-0 py-1 border-0">
+                                    <a href="{% url 'sales_pipeline:deal-detail' deal.pk %}">{{ deal.deal_id|default:deal.name }}</a> <small class="text-muted">({{ deal.probability }}%)</small> <span class="badge bg-light text-dark float-end">{{ deal.get_stage_display }}</span>
+                                </li>
+                            {% endfor %}
+                        </ul>
+                    {% else %}
+                        <p class="text-muted small">No open deals assigned.</p>
+                    {% endif %}
+                    <h6 class="mt-2">
+                        Quotes <span class="badge bg-secondary float-end">{{ my_open_quotes.count }}</span>
+                    </h6>
+                    {% if my_open_quotes %}
+                        <ul class="list-group list-group-flush mb-0">
+                            {% for quote in my_open_quotes %}
+                                <li class="list-group-item list-group-item-sm px-0 py-1 border-0">
+                                    <a href="{% url 'sales_pipeline:quote-detail' quote.pk %}">{{ quote.quote_id }}</a> <span class="badge bg-light text-dark float-end">{{ quote.get_status_display }}</span>
+                                </li>
+                            {% endfor %}
+                        </ul>
+                    {% else %}
+                        <p class="text-muted small mb-0">No open quotes assigned.</p>
+                    {% endif %}
+                </div>
+                <div class="card-footer text-end">
+                    <a href="{% url 'crm_entities:lead-list' %}" class="btn btn-link btn-sm">Leads</a> | <a href="{% url 'sales_pipeline:deal-list' %}" class="btn btn-link btn-sm">Deals</a> | <a href="{% url 'sales_pipeline:quote-list' %}" class="btn btn-link btn-sm">Quotes</a>
+                </div>
+            </div>
+            {# --- Deal Stages Overview Card - Sales Pipeline Group #}
+            <div class="card mb-4 shadow-sm" style="background-color: #f0e6ff;">
+                <div class="card-header">Deal Stages Overview</div>
+                <div class="card-body">
+                    <canvas id="dealsChart" width="400" height="200"></canvas>
+                </div>
+            </div>
+            {# ... Upcoming Tasks Card (Keep as is) - Activities Group #}
+            <div class="card mb-4 shadow-sm" style="background-color: #fff3e6;">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    My Upcoming / Due Tasks
+                    {% if my_overdue_tasks_count > 0 %}
+                        <span class="badge bg-danger rounded-pill">{{ my_overdue_tasks_count }} Overdue</span>
+                    {% endif %}
+                </div>
+                <ul class="list-group list-group-flush">
+                    {% for task in my_upcoming_tasks %}
+                        <li class="list-group-item">
+                            <a href="{% url 'activities:task-detail' task.pk %}">{{ task.subject }}</a><small class="text-muted d-block">Due: {{ task.due_date|date:"Y-m-d"|default:"None" }} | Pri: {{ task.get_priority_display }} | Status: {{ task.get_status_display }}</small>
+                        </li>
+                    {% empty %}
+                        <li class="list-group-item text-muted small">No upcoming/due tasks.</li>
+                    {% endfor %}
+                </ul>
+                <div class="card-footer text-end">
+                    <a href="{% url 'activities:task-list' %}">View All Tasks</a>
+                </div>
+            </div>
+            {# ... Upcoming Calls Card (Keep as is) - Activities Group #}
+            <div class="card mb-4 shadow-sm" style="background-color: #fff3e6;">
+                <div class="card-header">My Upcoming Calls</div>
+                <ul class="list-group list-group-flush">
+                    {% for call in my_upcoming_calls %}
+                        <li class="list-group-item">
+                            <a href="{% url 'activities:call-detail' call.pk %}">{{ call.subject }}</a><small class="text-muted d-block">Time: {{ call.call_time|date:"Y-m-d H:i"|default:"None" }} | Dir: {{ call.get_direction_display }}</small>
+                        </li>
+                    {% empty %}
+                        <li class="list-group-item text-muted small">No upcoming calls.</li>
+                    {% endfor %}
+                </ul>
+                <div class="card-footer text-end">
+                    <a href="{% url 'activities:call-list' %}">View All Calls</a>
+                </div>
+            </div>
+            {# ... Upcoming Meetings Card (Keep as is) - Activities Group #}
+            <div class="card mb-4 shadow-sm" style="background-color: #fff3e6;">
+                <div class="card-header">My Upcoming Meetings</div>
+                <ul class="list-group list-group-flush">
+                    {% for meeting in my_upcoming_meetings %}
+                        <li class="list-group-item">
+                            <a href="{% url 'activities:meeting-detail' meeting.pk %}">{{ meeting.subject }}</a><small class="text-muted d-block">Start: {{ meeting.start_time|date:"Y-m-d H:i"|default:"None" }} | Loc: {{ meeting.location|default:"N/A" }}</small>
+                        </li>
+                    {% empty %}
+                        <li class="list-group-item text-muted small">No upcoming meetings.</li>
+                    {% endfor %}
+                </ul>
+                <div class="card-footer text-end">
+                    <a href="{% url 'activities:meeting-list' %}">View All Meetings</a>
+                </div>
+            </div>
+        </div>
+        {# End Column 2 #}
+        {# --- Manager Team Detail Section --- #}
+        {% if user.is_manager_role %}
+            <div class="col-12">
+                <div class="card mb-4 shadow-sm" style="background-color: #f8f9fa;">
+                    <div class="card-header">Team Performance Details (Current Period)</div>
+                    {% if team_performance_data %}
+                        <div class="table-responsive">
+                            <table class="table table-sm table-striped mb-0">
+                                <thead>
+                                    <tr>
+                                        <th>Member</th>
+                                        <th>Target</th>
+                                        <th>Achieved</th>
+                                        <th>Progress</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for member_data in team_performance_data %}
+                                        <tr>
+                                            <td>{{ member_data.user.get_full_name|default:member_data.user.username }}</td>
+                                            <td>{{ member_data.amount|floatformat:2|intcomma }}</td>
+                                            <td>{{ member_data.achieved|floatformat:2|intcomma }}</td>
+                                            <td>
+                                                <div class="progress"
+                                                     style="height: 18px; min-width: 100px"
+                                                     title="{{ member_data.percent }}%">
+                                                    <div class="progress-bar {% if member_data.percent >= 100 %}bg-success{% elif member_data.percent >= 75 %}bg-info{% elif member_data.percent >= 50 %}bg-warning{% else %}bg-secondary{% endif %}"
+                                                         role="progressbar"
+                                                         style="width: {{ member_data.percent }}%; font-size: 0.75em; line-height: 18px"
+                                                         aria-valuenow="{{ member_data.percent }}"
+                                                         aria-valuemin="0"
+                                                         aria-valuemax="100">{{ member_data.percent }}%</div>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="card-body text-muted small">No team member performance data available for the current target period.</div>
+                    {% endif %}
+                    <div class="card-footer">
+                        <small> <strong>Team Pipeline Summary:</strong>
+                            {% if team_deals_by_stage_weighted %}
+                                {% for stage, data in team_deals_by_stage_weighted.items %}
+                                    <span class="badge bg-secondary me-1">{{ stage }}: {{ data.count }} (Wt: {{ data.weighted|floatformat:0|intcomma }})</span>
+                                {% endfor %}
+                            {% else %}
+                                <span class="text-muted small">No open deals found for team.</span>
+                            {% endif %}
+                            <span class="ms-2 text-muted">| Team Open Quotes: {{ team_open_quotes_count|default:0 }}</span> </small>
+                    </div>
+                </div>
+            </div>
+        {% endif %}
+        {# End Manager Section #}
+        {# --- Admin Overview Section --- #}
+        {% if user.is_admin_role %}
+            <div class="col-12">
+                <div class="card mb-4 shadow-sm" style="background-color: #f8f9fa;">
+                    <div class="card-header">Overall Performance (Current Period Targets)</div>
+                    {% if all_performance_data %}
+                        <div class="table-responsive">
+                            <table class="table table-sm table-striped mb-0">
+                                <thead>
+                                    <tr>
+                                        <th>User</th>
+                                        <th>Role</th>
+                                        <th>Target</th>
+                                        <th>Achieved</th>
+                                        <th>Progress</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for data in all_performance_data %}
+                                        <tr>
+                                            <td>{{ data.user.get_full_name|default:data.user.username }}</td>
+                                            <td>{{ data.user.get_role_display }}</td>
+                                            <td>{{ data.amount|floatformat:2|intcomma }}</td>
+                                            <td>{{ data.achieved|floatformat:2|intcomma }}</td>
+                                            <td>
+                                                <div class="progress"
+                                                     style="height: 18px; min-width: 100px"
+                                                     title="{{ data.percent }}%">
+                                                    <div class="progress-bar {% if data.percent >= 100 %}bg-success{% elif data.percent >= 75 %}bg-info{% elif data.percent >= 50 %}bg-warning{% else %}bg-secondary{% endif %}"
+                                                         role="progressbar"
+                                                         style="width: {{ data.percent }}%; font-size: 0.75em; line-height: 18px"
+                                                         aria-valuenow="{{ data.percent }}"
+                                                         aria-valuemin="0"
+                                                         aria-valuemax="100">{{ data.percent }}%</div>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="card-body text-muted small">No performance data available for tracked users.</div>
+                    {% endif %}
+                    {% if all_deals_by_stage_weighted %}
+                        <div class="card-footer">
+                            <small> <strong>All Open Deals by Stage:</strong>
+                                {% for stage, data in all_deals_by_stage_weighted.items %}
+                                    <span class="badge bg-secondary me-1">{{ stage }}: {{ data.count }} (Wt: {{ data.weighted|floatformat:0|intcomma }})</span>
+                                {% endfor %}
+                                <span class="ms-2 text-muted">| All Open Quotes: {{ all_open_quotes_count|default:0 }}</span> </small>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        {% endif %}
+        {# End Admin Section #}
+    </div>
+    {# End row #}
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        // --- Basic Bar Chart for Open Deals by Stage ---
+        const ctx = document.getElementById('dealsChart').getContext('2d');
+        const dealsChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: [{% for stage, count in deals_by_stage.items %}'{{ stage }}', {% endfor %}],
+                datasets: [{
+                    label: 'Number of Deals',
+                    data: [{% for stage, count in deals_by_stage.items %}{{ count }}, {% endfor %}],
+                    backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                    borderColor: 'rgba(75, 192, 192, 1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                scales: { y: { beginAtZero: true } },
+                responsive: true
+            }
+        });
+    </script>
+{% endblock content %}

@@ -1,0 +1,296 @@
+{% extends "base.html" %}
+{% load static %}
+{% load humanize %}
+{% block title %}Account: {{ account.name }}{% endblock %}
+{% block content %}
+    {# Header row #}
+    <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+        <h1 class="h2">{{ account.name }}</h1>
+        <div class="btn-toolbar mb-2 mb-md-0">
+            <a href="{% url 'crm_entities:account-update' account.pk %}"
+               class="btn btn-sm btn-primary me-2">Edit</a>
+            {% if perms.crm_entities.delete_account %}   
+            <a href="{% url 'crm_entities:account-delete' account.pk %}"
+               class="btn btn-sm btn-danger">Delete</a>
+            {% endif %}
+            {% if user.is_admin_role %}
+                <a href="{% url 'crm_entities:account-export' %}?id={{ account.pk }}"
+                   class="btn btn-sm btn-outline-success me-2"
+                   title="Export this Account (Admin only)">Export</a>
+            {% endif %}
+            <a href="{% url 'crm_entities:account-list' %}"
+               class="btn btn-sm btn-outline-secondary ms-2">Back to List</a>
+        </div>
+    </div>
+    <div class="row g-4">
+        {# Main details column #}
+        <div class="col-lg-8">
+            <div class="card mb-4 shadow-sm">
+                <div class="card-header">Account Details</div>
+                <div class="card-body">
+                    <p>
+                        <strong>Name:</strong> {{ account.name }}
+                    </p>
+                    <p>
+                        <strong>Website:</strong>
+                        {% if account.website %}
+                            <a href="{{ account.website }}"
+                               target="_blank"
+                               rel="noopener noreferrer">{{ account.website }}</a>
+                        {% else %}
+                            --
+                        {% endif %}
+                    </p>
+                    <p>
+                        <strong>Phone:</strong> {{ account.phone_number|default:"--" }}
+                    </p>
+                    <p>
+                        <strong>Industry:</strong> {{ account.industry|default:"--" }}
+                    </p>
+                    <p>
+                        <strong>Status:</strong> <span class="badge bg-info text-dark">{{ account.status|default:"--" }}</span>
+                    </p>
+                    <p>
+                        <strong>Territory:</strong> {{ account.territory.name|default:"--" }}
+                    </p>
+                    <p>
+                        <strong>Assigned To:</strong>
+                        {% if account.assigned_to %}
+                            {{ account.assigned_to.get_full_name|default:account.assigned_to.username }}
+                        {% else %}
+                            --
+                        {% endif %}
+                    </p>
+                    <hr>
+                    <p class="card-text">
+                        <small class="text-muted">
+                            Created By:
+                            {% if account.created_by %}
+                                {{ account.created_by.get_full_name|default:account.created_by.username }}
+                            {% else %}
+                                System/Unknown
+                            {% endif %}
+                            on {{ account.created_at|date:"Y-m-d H:i"|default:"N/A" }}
+                            <br>
+                            Last Updated: {{ account.updated_at|date:"Y-m-d H:i" }}
+                        </small>
+                    </p>
+                </div>
+            </div>
+            {# Address card #}
+            <div class="card mb-4 shadow-sm">
+                <div class="card-header">Address Information</div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h5>Billing Address</h5>
+                            <p>{{ account.billing_address|linebreaksbr|default:"--" }}</p>
+                        </div>
+                        <div class="col-md-6">
+                            <h5>Shipping Address</h5>
+                            <p>{{ account.shipping_address|linebreaksbr|default:"--" }}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {# Related items column (using tabs) #}
+        <div class="col-lg-4">
+            <div class="card shadow-sm">
+                <div class="card-header">Related Items</div>
+                <div class="card-body">
+                    {# Tab navigation #}
+                    <ul class="nav nav-pills mb-3 nav-fill flex-column flex-sm-row"
+                        id="related-tab"
+                        role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active"
+                                    id="contacts-tab"
+                                    data-bs-toggle="tab"
+                                    data-bs-target="#contacts-content"
+                                    type="button"
+                                    role="tab"
+                                    aria-controls="contacts-content"
+                                    aria-selected="true">Contacts ({{ account.contacts.count }})</button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link"
+                                    id="deals-tab"
+                                    data-bs-toggle="tab"
+                                    data-bs-target="#deals-content"
+                                    type="button"
+                                    role="tab"
+                                    aria-controls="deals-content"
+                                    aria-selected="false">Deals ({{ account.deals.count }})</button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link"
+                                    id="activities-tab"
+                                    data-bs-toggle="tab"
+                                    data-bs-target="#activities-content"
+                                    type="button"
+                                    role="tab"
+                                    aria-controls="activities-content"
+                                    aria-selected="false">Activities</button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link"
+                                    id="quotes-tab"
+                                    data-bs-toggle="tab"
+                                    data-bs-target="#quotes-content"
+                                    type="button"
+                                    role="tab"
+                                    aria-controls="quotes-content"
+                                    aria-selected="false">Quotes ({{ account.quotes.count }})</button>
+                        </li>
+                    </ul>
+                    {# Tab content #}
+                    <div class="tab-content" id="related-tabContent">
+                        {# Contacts tab pane #}
+                        <div class="tab-pane fade show active"
+                             id="contacts-content"
+                             role="tabpanel"
+                             aria-labelledby="contacts-tab">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <h6 class="mb-0">Contacts</h6>
+                                <a href="{% url 'crm_entities:contact-create' %}?account={{ account.pk }}"
+                                   class="btn btn-sm btn-success">+ Add Contact</a>
+                            </div>
+                            {% if account.contacts.all %}
+                                <ul class="list-group list-group-flush">
+                                    {% for contact in account.contacts.all|slice:":5" %}
+                                        <li class="list-group-item d-flex justify-content-between align-items-center px-0 py-1">
+                                            <div>
+                                                <a href="{% url 'crm_entities:contact-detail' contact.pk %}">{{ contact.full_name }}</a>
+                                                <small class="d-block text-muted">{{ contact.title|default:"" }}
+                                                    {% if contact.title and contact.email %}|{% endif %}
+                                                {{ contact.email|default:"" }}</small>
+                                            </div>
+                                            <small class="text-muted ps-1">{{ contact.work_phone|default:contact.mobile_phone_1|default:"" }}</small>
+                                        </li>
+                                    {% endfor %}
+                                    {% if account.contacts.count > 5 %}
+                                        <li class="list-group-item px-0 py-1">
+                                            <a href="{% url 'crm_entities:contact-list' %}?account={{ account.pk }}"
+                                               class="btn btn-link btn-sm p-0">View all...</a>
+                                        </li>
+                                    {% endif %}
+                                </ul>
+                            {% else %}
+                                <p class="text-muted small">No contacts associated.</p>
+                            {% endif %}
+                        </div>
+                        {# Deals tab pane #}
+                        <div class="tab-pane fade"
+                             id="deals-content"
+                             role="tabpanel"
+                             aria-labelledby="deals-tab">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <h6 class="mb-0">Deals</h6>
+                                <a href="{% url 'sales_pipeline:deal-create' %}?account={{ account.pk }}"
+                                   class="btn btn-sm btn-success">+ Add Deal</a>
+                            </div>
+                            {% if account.deals.all %}
+                                <ul class="list-group list-group-flush">
+                                    {% for deal in account.deals.all|slice:":5" %}
+                                        <li class="list-group-item d-flex justify-content-between align-items-center px-0 py-1">
+                                            <div>
+                                                <a href="{% url 'sales_pipeline:deal-detail' deal.pk %}">{{ deal.deal_id|default:deal.name }}</a>
+                                                <small class="d-block text-muted">{{ deal.get_stage_display }} | Close: {{ deal.close_date|date:"Y-m-d" }}</small>
+                                            </div>
+                                            <span class="badge bg-primary rounded-pill">{{ deal.amount|floatformat:0|intcomma }} {{ deal.currency }}</span>
+                                        </li>
+                                    {% endfor %}
+                                    {% if account.deals.count > 5 %}
+                                        <li class="list-group-item px-0 py-1">
+                                            <a href="{% url 'sales_pipeline:deal-list' %}?account={{ account.pk }}"
+                                               class="btn btn-link btn-sm p-0">View all...</a>
+                                        </li>
+                                    {% endif %}
+                                </ul>
+                            {% else %}
+                                <p class="text-muted small">No deals associated.</p>
+                            {% endif %}
+                        </div>
+                        {# Activities tab pane #}
+                        <div class="tab-pane fade"
+                             id="activities-content"
+                             role="tabpanel"
+                             aria-labelledby="activities-tab">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <h6 class="mb-0">Activities</h6>
+                                <div>
+                                    <a href="{% url 'activities:task-create' %}?account={{ account.pk }}"
+                                       class="btn btn-sm btn-success"
+                                       title="Add Task">+T</a>
+                                    <a href="{% url 'activities:call-create' %}?account={{ account.pk }}"
+                                       class="btn btn-sm btn-success ms-1"
+                                       title="Log Call">+C</a>
+                                    <a href="{% url 'activities:meeting-create' %}?account={{ account.pk }}"
+                                       class="btn btn-sm btn-success ms-1"
+                                       title="Add Meeting">+M</a>
+                                </div>
+                            </div>
+                            {% if account.tasks.all or account.calls.all or account.meetings.all %}
+                                <ul class="list-group list-group-flush">
+                                    {% for task in account.tasks.all|slice:":3" %}
+                                        <li class="list-group-item px-0 py-1">
+                                            <a href="{% url 'activities:task-detail' task.pk %}">Task: {{ task.subject }}</a>
+                                            <small class="text-muted float-end">Due: {{ task.due_date|date:"Y-m-d"|default:"None" }}</small>
+                                        </li>
+                                    {% endfor %}
+                                    {% for call in account.calls.all|slice:":3" %}
+                                        <li class="list-group-item px-0 py-1">
+                                            <a href="{% url 'activities:call-detail' call.pk %}">Call: {{ call.subject }}</a>
+                                            <small class="text-muted float-end">{{ call.call_time|date:"Y-m-d H:i" }}</small>
+                                        </li>
+                                    {% endfor %}
+                                    {% for meeting in account.meetings.all|slice:":3" %}
+                                        <li class="list-group-item px-0 py-1">
+                                            <a href="{% url 'activities:meeting-detail' meeting.pk %}">Meeting: {{ meeting.subject }}</a>
+                                            <small class="text-muted float-end">{{ meeting.start_time|date:"Y-m-d H:i" }}</small>
+                                        </li>
+                                    {% endfor %}
+                                </ul>
+                            {% else %}
+                                <p class="text-muted small">No activities associated.</p>
+                            {% endif %}
+                        </div>
+                        {# Quotes tab pane #}
+                        <div class="tab-pane fade"
+                             id="quotes-content"
+                             role="tabpanel"
+                             aria-labelledby="quotes-tab">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <h6 class="mb-0">Quotes</h6>
+                                <a href="{% url 'sales_pipeline:quote-create' %}?account={{ account.pk }}"
+                                   class="btn btn-sm btn-success">+ Add Quote</a>
+                            </div>
+                            {% if account.quotes.all %}
+                                <ul class="list-group list-group-flush">
+                                    {% for quote in account.quotes.all|slice:":5" %}
+                                        <li class="list-group-item d-flex justify-content-between align-items-center px-0 py-1">
+                                            <div>
+                                                <a href="{% url 'sales_pipeline:quote-detail' quote.pk %}">{{ quote.quote_id|default:"N/A" }}</a>
+                                                <small class="d-block text-muted">{{ quote.get_status_display }}</small>
+                                            </div>
+                                            <span class="badge bg-secondary rounded-pill">{{ quote.total_amount|default:"0"|intcomma }}</span>
+                                        </li>
+                                    {% endfor %}
+                                    {% if account.quotes.count > 5 %}
+                                        <li class="list-group-item px-0 py-1">
+                                            <a href="{% url 'sales_pipeline:quote-list' %}?account={{ account.pk }}"
+                                               class="btn btn-link btn-sm p-0">View all...</a>
+                                        </li>
+                                    {% endif %}
+                                </ul>
+                            {% else %}
+                                <p class="text-muted small">No quotes associated.</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
