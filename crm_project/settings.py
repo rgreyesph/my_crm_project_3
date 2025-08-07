@@ -188,6 +188,12 @@ AUTH_USER_MODEL = 'users.CustomUser'
 # HTTPS Settings (Read from environment variables set by EB)
 # Default to False if the variable isn't explicitly 'True'
 CSRF_COOKIE_SECURE = os.environ.get('CSRF_COOKIE_SECURE', 'False') == 'True'
+
+CSRF_TRUSTED_ORIGINS = [
+    'https://crm.herkings.com',
+    'https://herkingscrm2-env-2.eba-2uyc82ds.ap-southeast-1.elasticbeanstalk.com'
+]
+
 SESSION_COOKIE_SECURE = os.environ.get('SESSION_COOKIE_SECURE', 'False') == 'True'
 #SECURE_SSL_REDIRECT = os.environ.get('SECURE_SSL_REDIRECT', 'False') == 'True'
 SECURE_HSTS_SECONDS = int(os.environ.get('SECURE_HSTS_SECONDS', 0)) # Default to 0 (off)
