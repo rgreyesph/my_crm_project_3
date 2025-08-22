@@ -43,24 +43,29 @@ if not DEBUG and not os.environ.get('ALLOWED_HOSTS_PROD'):
 print(f"DEBUG: ALLOWED_HOSTS={ALLOWED_HOSTS}")
 
 # Application definition
+
 INSTALLED_APPS = [
+    # DAL must come BEFORE django.contrib.admin
     'dal',
     'dal_select2',
-    'dal_legacy_static',
+    # Remove 'dal_legacy_static' - this might be causing issues
+    
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
-    'whitenoise.runserver_nostatic', # Whitenoise (place high)
-    'django.contrib.staticfiles', # Must come AFTER whitenoise if using runserver_nostatic
+    'whitenoise.runserver_nostatic',
+    'django.contrib.staticfiles',
     'django.contrib.humanize',
+    
     # Third-party apps
     'django_filters',
     'django_ses_gateway',
     'crispy_forms',
     'crispy_bootstrap5',
-    # Our custom apps: (Using AppConfig paths)
+    
+    # Your apps
     'users.apps.UsersConfig',
     'core.apps.CoreConfig',
     'crm_entities.apps.CrmEntitiesConfig',
@@ -69,6 +74,7 @@ INSTALLED_APPS = [
     'activities.apps.ActivitiesConfig',
     'sales_performance.apps.SalesPerformanceConfig',
 ]
+
 # Exempt health check from HTTPS redirect
 SECURE_SSL_REDIRECT = os.environ.get('SECURE_SSL_REDIRECT', 'False') == 'True'
 if SECURE_SSL_REDIRECT:
