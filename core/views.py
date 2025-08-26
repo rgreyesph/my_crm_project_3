@@ -22,12 +22,27 @@ from sales_performance.models import SalesTarget
 from sales_pipeline.models import Deal, Quote
 from sales_territories.models import Territory
 from users.models import CustomUser
-from django.http import HttpResponse
+from django.http import HttpResponse, Http404
 from django.views.decorators.csrf import csrf_exempt
+import re
 
 @csrf_exempt
 def health_check(request):
     return HttpResponse("OK", status=200)
+
+def block_bots(request):
+    """Return 444-like response for bot requests"""
+    # Don't log these requests
+    return HttpResponse(status=204)  # No Content
+
+def robots_txt(request):
+    """Serve robots.txt to discourage bots"""
+    content = """User-agent: *
+Disallow: /static/
+Disallow: /admin/
+Crawl-delay: 10
+"""
+    return HttpResponse(content, content_type="text/plain")
 
 class DashboardView(LoginRequiredMixin, TemplateView):
     template_name = 'dashboard.html'
