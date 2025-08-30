@@ -8,30 +8,21 @@ class CustomSecurityMiddleware(SecurityMiddleware):
             return None  # Skip HTTPS redirect
         return super().process_request(request)
 
-class BotBlockingMiddleware:
+class StaticFileBlockingMiddleware:
     def __init__(self, get_response):
         self.get_response = get_response
-        self.blocked_patterns = [
-            r'/static/js/.*\.chunk\.js$',
-            r'/static/js/main\.[a-f0-9]+\.js$',
-            r'/static/config\.json$',
-            r'/static/\.env$',
-            r'/static/\.git/.*$',
-            r'/static/\.ssh/.*$',
-            r'/static/\.vscode/.*$',
-            r'/static/jenkinsFile$',
-            r'/static/.*\.ini$',
-            r'/static/.*\.yml$',
-            r'/static/.*\.yaml$',
-            r'/static/\.[^/]*$',  # Any dotfile
+        self.blocked_static_patterns = [
+            r'\.env$', r'\.git/', r'\.ssh/', r'jenkinsFile$',
+            r'\.ini$', r'\.yml$', r'\.yaml$', r'\.vscode/',
+            r'js/.*\.chunk\.js$', r'js/main\.[a-f0-9]+\.js$',
+            r'config\.json$'
         ]
-        self.compiled_patterns = [re.compile(pattern) for pattern in self.blocked_patterns]
+        self.compiled_patterns = [re.compile(pattern) for pattern in self.blocked_static_patterns]
 
     def __call__(self, request):
-        # Check if request matches any blocked pattern
-        for pattern in self.compiled_patterns:
-            if pattern.match(request.path):
-                return HttpResponse(status=204)  # No Content
-        
-        response = self.get_response(request)
-        return response
+        if request.path.startswith('/static/'):
+            path_after_static = request.path[8:]  # Remove '/static/'
+            for pattern in self.compiled_patterns:
+                if pattern.search(path_after_static):
+                    return HttpResponse(status=204)
+        return self.get_response(request)

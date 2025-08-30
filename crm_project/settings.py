@@ -86,7 +86,7 @@ if SECURE_SSL_REDIRECT:
 
 MIDDLEWARE = [
     # 'django.middleware.security.SecurityMiddleware', #
-    'crm_project.middleware.BotBlockingMiddleware',
+    'crm_project.middleware.StaticFileBlockingMiddleware',
     'crm_project.middleware.CustomSecurityMiddleware',  # Replace SecurityMiddleware
     'whitenoise.middleware.WhiteNoiseMiddleware', # Whitenoise middleware (after Security)
     'django.contrib.sessions.middleware.SessionMiddleware',
