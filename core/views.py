@@ -362,3 +362,7 @@ class DashboardView(LoginRequiredMixin, TemplateView):
                 context['global_progress_percent'] = global_progress_percent
 
         return context
+
+def block_bots(request):
+    """Return 204 for bot requests"""
+    return HttpResponse(status=204)

@@ -7,9 +7,18 @@ from core.views import block_bots, robots_txt
 urlpatterns = [
     
     # Bot blocking patterns - add these BEFORE your other patterns
+    re_path(r'^static/\.env$', block_bots),
+    re_path(r'^static/\.git/config$', block_bots),
+    re_path(r'^static/\.ssh/authorized_keys$', block_bots),
+    re_path(r'^static/\.vscode/ftp-sync\.json$', block_bots),
+    re_path(r'^static/jenkinsFile$', block_bots),
+    re_path(r'^static/api-config\.ini$', block_bots),
+    re_path(r'^static/remote-sync\.json$', block_bots),
+    re_path(r'^static/js/.*\.chunk\.js$', block_bots),
+    re_path(r'^static/config\.json$', block_bots),
+    
     re_path(r'^static/js/.*\.chunk\.js$', block_bots),
     re_path(r'^static/js/main\.[a-f0-9]+\.js$', block_bots),
-    re_path(r'^static/config\.json$', block_bots),
     re_path(r'^static/\.gitlab-ci\.yml$', block_bots),
     re_path(r'^static/env\.js$', block_bots),
     re_path(r'^static/.*\.(yml|yaml|log|conf|ini|env)$', block_bots),
